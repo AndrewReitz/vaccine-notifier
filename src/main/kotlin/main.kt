@@ -12,6 +12,8 @@ external fun fetch(input: dynamic, init: RequestInit = definedExternally): Promi
 
 const val DISCORD_URL = "https://discord.com/api/webhooks/tokenHere"
 const val STATE_CODE = "MN"
+const val ZIP_CODE = "66011"
+const val RADIUS = "25"
 
 fun main() {
     GlobalScope.launch {
@@ -29,7 +31,7 @@ fun main() {
                         "sec-gpc" to "1",
                         "cookie" to "__cfduid=dbc2e6f634d64033ebf1041688acfd4981616959422"
                     ),
-                    referrer = "https://www.vaccinespotter.org/MN/?zip=55422&radius=25",
+                    referrer = "https://www.vaccinespotter.org/$STATE_CODE/?zip=$ZIP_CODE&radius=$RADIUS",
                     referrerPolicy = "strict-origin-when-cross-origin",
                     body = null,
                     method = "GET",
@@ -42,24 +44,22 @@ fun main() {
             response.features.unsafeCast<Array<dynamic>>()
                 .asSequence()
                 .map { it.properties }
-                .filter { it.appointments_available == "true" }
+                .filter { it.appointments_available == true }
                 .forEach {
-                    fetch(DISCORD_URL,
-                        RequestInit(
-                            method = "POST",
-                            headers = json("Content-type" to "application/json"),
-                            body = json("content" to """
-                        Vaccine Available at:
+                    println("found vaccines")
+                        fetch(DISCORD_URL,
+                            RequestInit(
+                                method = "POST",
+                                headers = json("Content-type" to "application/json"),
+                                body = JSON.stringify(json("content" to """
+                        💉 Vaccine Available 💉 
                         ${it.name}
                         ${it.address}
-                        ${
-                                it.appointment_vaccine_types.unsafeCast<Array<Map<String, Boolean>>>()
-                                    .flatMap { a -> a.toList() }
-                                    .filter { (_, b) -> b }
-                                    .joinToString { (a, _) -> a }
-                            }
-                    """.trimIndent())
-                        ))
+                        ${it.city} ${it.state}
+                        ${it.url}
+                        
+                        """.trimIndent()))
+                            )).await()
                 }
             delay(1000 * 60)
         }
